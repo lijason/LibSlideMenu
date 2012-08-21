@@ -98,6 +98,8 @@ public abstract class SlideView extends LinearLayout {
 	}
 
 	public void toggle() {
+		if (menu == null)
+			menuShown = false;
 		if (menuShown) {
 			hide();
 		} else {
