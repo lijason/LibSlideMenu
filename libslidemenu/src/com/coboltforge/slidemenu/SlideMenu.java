@@ -172,9 +172,24 @@ public class SlideMenu extends SlideView {
 	}
 	
 
-	@Override
-	public View inflateSlideview(LayoutInflater inflater) {
-		View v = inflater.inflate(R.layout.slidemenu, null);
+	
+	
+	private void show(boolean animate) {
+		
+		// modify content layout params
+		content = ((LinearLayout) act.findViewById(android.R.id.content).getParent());
+		FrameLayout.LayoutParams parm = new FrameLayout.LayoutParams(-1, -1, 3);
+		parm.setMargins(menuSize, 0, -menuSize, 0);
+		content.setLayoutParams(parm);
+		
+		// animation for smooth slide-out
+		if(animate)
+			content.startAnimation(slideRightAnim);
+		
+		// add the slide menu to parent
+		parent = (FrameLayout) act.getWindow().getDecorView();
+		LayoutInflater inflater = (LayoutInflater) act.getSystemService(Context.LAYOUT_INFLATER_SERVICE);
+		menu = inflater.inflate(R.layout.slidemenu, null);
 		FrameLayout.LayoutParams lays = new FrameLayout.LayoutParams(-1, -1, 3);
 		lays.setMargins(0, statusHeight, 0, 0);
 		v.setLayoutParams(lays);
