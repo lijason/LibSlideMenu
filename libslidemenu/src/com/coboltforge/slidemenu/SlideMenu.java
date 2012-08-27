@@ -84,6 +84,13 @@ public class SlideMenu extends SlideView {
 		}
 	}
 	
+	private static boolean menuShown = false;
+	private int statusHeight;
+	private static View menu;
+	private static ViewGroup content;
+	private static FrameLayout parent;
+	private static int menuSize;
+	private Activity act;
 	private int headerImageRes;
 	
 	private ArrayList<SlideMenuItem> menuItemList;
@@ -177,7 +184,17 @@ public class SlideMenu extends SlideView {
 	private void show(boolean animate) {
 		
 		// modify content layout params
-		content = ((LinearLayout) act.findViewById(android.R.id.content).getParent());
+		try {
+			content = ((LinearLayout) act.findViewById(android.R.id.content).getParent());
+		}
+		catch(ClassCastException e) {
+			/*
+			 * When there is no title bar (android:theme="@android:style/Theme.NoTitleBar"),
+			 * the android.R.id.content FrameLayout is directly attached to the DecorView,
+			 * without the intermediate LinearLayout that holds the titlebar plus content.
+			 */
+			content = (FrameLayout) act.findViewById(android.R.id.content);
+		}
 		FrameLayout.LayoutParams parm = new FrameLayout.LayoutParams(-1, -1, 3);
 		parm.setMargins(menuSize, 0, -menuSize, 0);
 		content.setLayoutParams(parm);
@@ -225,8 +242,60 @@ public class SlideMenu extends SlideView {
 				SlideMenu.this.hide();
 			}
 		});
-		
-		return v;
+		enableDisableViewGroup(content, false);
+
+		menuShown = true;
+	}
+	
+	
+	
+	/**
+	 * Slide the menu out.
+	 */
+	public void hide() {
+		menu.startAnimation(slideMenuLeftAnim);
+		parent.removeView(menu);
+
+		content.startAnimation(slideContentLeftAnim);
+
+		FrameLayout.LayoutParams parm = (FrameLayout.LayoutParams) content.getLayoutParams();
+		parm.setMargins(0, 0, 0, 0);
+		content.setLayoutParams(parm);
+		enableDisableViewGroup(content, true);
+
+		menuShown = false;
+	}
+
+	
+	private void applyStatusbarOffset() {
+		Rect r = new Rect();
+		Window window = act.getWindow();
+		window.getDecorView().getWindowVisibleDisplayFrame(r);
+		statusHeight = r.top;
+	}
+	
+	
+	//originally: http://stackoverflow.com/questions/5418510/disable-the-touch-events-for-all-the-views
+	//modified for the needs here
+	private void enableDisableViewGroup(ViewGroup viewGroup, boolean enabled) {
+		int childCount = viewGroup.getChildCount();
+		for (int i = 0; i < childCount; i++) {
+			View view = viewGroup.getChildAt(i);
+			if(view.isFocusable())
+				view.setEnabled(enabled);
+			if (view instanceof ViewGroup) {
+				enableDisableViewGroup((ViewGroup) view, enabled);
+			} else if (view instanceof ListView) {
+				if(view.isFocusable())
+					view.setEnabled(enabled);
+				ListView listView = (ListView) view;
+				int listChildCount = listView.getChildCount();
+				for (int j = 0; j < listChildCount; j++) {
+					if(view.isFocusable())
+						listView.getChildAt(j).setEnabled(false);
+				}
+			}
+		}
 	}
 	
 	// originally: https://github.com/darvds/RibbonMenu
