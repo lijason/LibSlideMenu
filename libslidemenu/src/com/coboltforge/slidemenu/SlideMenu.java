@@ -148,6 +148,20 @@ public class SlideMenu extends SlideView {
 		super.init(act, slideDuration);
 		
 		this.callback = cb;
+	
+		// set size
+		menuSize = (int) TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 250, act.getResources().getDisplayMetrics());
+		
+		// create animations accordingly
+		slideRightAnim = new TranslateAnimation(-menuSize, 0, 0, 0);
+		slideRightAnim.setDuration(slideDuration);
+		slideRightAnim.setFillAfter(true);
+		slideMenuLeftAnim = new TranslateAnimation(0, -menuSize, 0, 0);
+		slideMenuLeftAnim.setDuration(slideDuration);
+		slideMenuLeftAnim.setFillAfter(true);
+		slideContentLeftAnim = new TranslateAnimation(menuSize, 0, 0, 0);
+		slideContentLeftAnim.setDuration(slideDuration);
+		slideContentLeftAnim.setFillAfter(true);
 
 		// and get our menu
 		parseXml(menuResource);
