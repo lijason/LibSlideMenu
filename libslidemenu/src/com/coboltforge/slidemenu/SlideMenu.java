@@ -192,10 +192,43 @@ public class SlideMenu extends SlideView {
 		menuItemList.clear();
 	}
 	
-
 	
+
+	/**
+	 * Slide the menu in.
+	 */
+	public void show() {
+		this.show(true);
+	}
+
+	/**
+	 * Set the menu to shown status without displaying any slide animation. 
+	 */
+	public void setAsShown() {
+		this.show(false);
+	}
 	
 	private void show(boolean animate) {
+		
+		/*
+		 *  We have to adopt to status bar height in most cases,
+		 *  but not if there is a support actionbar!
+		 */
+		try {
+			Method getSupportActionBar = act.getClass().getMethod("getSupportActionBar", (Class[])null);
+			Object sab = getSupportActionBar.invoke(act, (Object[])null);
+			sab.toString(); // check for null
+
+			if (android.os.Build.VERSION.SDK_INT >= 11) {
+				// over api level 11? add the margin
+				applyStatusbarOffset();
+			}
+		}
+		catch(Exception es) {
+			// there is no support action bar!
+			applyStatusbarOffset();
+		}
+
 		
 		// modify content layout params
 		try {
