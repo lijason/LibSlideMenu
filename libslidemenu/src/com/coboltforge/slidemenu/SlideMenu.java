@@ -91,7 +91,10 @@ public class SlideMenu extends SlideView {
 	private static FrameLayout parent;
 	private static int menuSize;
 	private Activity act;
-	private int headerImageRes;
+	private Drawable headerImage;
+	private TranslateAnimation slideRightAnim;
+	private TranslateAnimation slideMenuLeftAnim;
+	private TranslateAnimation slideContentLeftAnim;
 	
 	private ArrayList<SlideMenuItem> menuItemList;
 	private SlideMenuInterface.OnSlideMenuItemClickListener callback;
@@ -169,10 +172,10 @@ public class SlideMenu extends SlideView {
 	
 	/**
 	 * Sets an optional image to be displayed on top of the menu.
-	 * @param imageResource
+	 * @param d
 	 */
-	public void setHeaderImage(int imageResource) {
-		headerImageRes = imageResource;
+	public void setHeaderImage(Drawable d) {
+		headerImage = d;
 	}
 	
 	
@@ -260,8 +263,8 @@ public class SlideMenu extends SlideView {
 		
 		// set header
 		try {
-			ImageView header = (ImageView) v.findViewById(R.id.menu_header); 
-			header.setImageDrawable(act.getResources().getDrawable(headerImageRes));
+			ImageView header = (ImageView) act.findViewById(R.id.menu_header); 
+			header.setImageDrawable(headerImage);
 		}
 		catch(Exception e) {
 			// not found
