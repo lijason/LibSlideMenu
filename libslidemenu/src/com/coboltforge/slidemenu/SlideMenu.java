@@ -28,6 +28,8 @@ import org.xmlpull.v1.XmlPullParser;
 import android.app.Activity;
 import android.content.Context;
 import android.content.res.XmlResourceParser;
+import android.graphics.Rect;
+import android.graphics.Typeface;
 import android.graphics.drawable.Drawable;
 import android.util.AttributeSet;
 import android.view.LayoutInflater;
@@ -53,15 +55,18 @@ public class SlideMenu extends SlideView {
 	private static class SlideMenuAdapter extends ArrayAdapter<SlideMenuItem> {
 		Activity act;
 		SlideMenuItem[] items;
+		Typeface itemFont;
+		
 		class MenuItemHolder {
 			public TextView label;
 			public ImageView icon;
 		}
 		
-		public SlideMenuAdapter(Activity act, SlideMenuItem[] items) {
+		public SlideMenuAdapter(Activity act, SlideMenuItem[] items, Typeface itemFont) {
 			super(act, R.id.menu_label, items);
 			this.act = act;
 			this.items = items;
+			this.itemFont = itemFont;
 		}
 		@Override
 		public View getView(int position, View convertView, ViewGroup parent) {
@@ -71,6 +76,8 @@ public class SlideMenu extends SlideView {
 				rowView = inflater.inflate(R.layout.slidemenu_listitem, null);
 				MenuItemHolder viewHolder = new MenuItemHolder();
 				viewHolder.label = (TextView) rowView.findViewById(R.id.menu_label);
+				if(itemFont != null) 
+					viewHolder.label.setTypeface(itemFont);
 				viewHolder.icon = (ImageView) rowView.findViewById(R.id.menu_icon);
 				rowView.setTag(viewHolder);
 			}
@@ -92,6 +99,7 @@ public class SlideMenu extends SlideView {
 	private static int menuSize;
 	private Activity act;
 	private Drawable headerImage;
+	private Typeface font;
 	private TranslateAnimation slideRightAnim;
 	private TranslateAnimation slideMenuLeftAnim;
 	private TranslateAnimation slideContentLeftAnim;
@@ -176,6 +184,14 @@ public class SlideMenu extends SlideView {
 	 */
 	public void setHeaderImage(Drawable d) {
 		headerImage = d;
+	}
+	
+	/**
+	 * Optionally sets the font for the menu items.
+	 * @param f A font.
+	 */
+	public void setFont(Typeface f) {
+		font = f;
 	}
 	
 	
@@ -273,7 +289,7 @@ public class SlideMenu extends SlideView {
 		// connect the menu's listview
 		ListView list = (ListView) v.findViewById(R.id.menu_listview);
 		SlideMenuItem[] items = menuItemList.toArray(new SlideMenuItem[menuItemList.size()]);
-		SlideMenuAdapter adap = new SlideMenuAdapter(act, items);
+		SlideMenuAdapter adap = new SlideMenuAdapter(act, items, font);
 		list.setAdapter(adap);
 		list.setOnItemClickListener(new OnItemClickListener() {
 			@Override
