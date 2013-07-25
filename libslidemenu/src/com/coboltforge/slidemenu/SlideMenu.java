@@ -311,8 +311,6 @@ public class SlideMenu extends LinearLayout {
 			content.setX(menuSize);
 
 		// add the slide menu to parent
-		parent = (FrameLayout) content.getParent();
-
 		try{
 			parent = (FrameLayout) content.getParent();
 		}catch(ClassCastException e){
