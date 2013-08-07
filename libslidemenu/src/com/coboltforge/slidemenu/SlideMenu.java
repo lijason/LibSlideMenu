@@ -50,12 +50,7 @@ import android.widget.ImageView;
 import android.widget.ListView;
 import android.widget.TextView;
 
-public class SlideMenu extends LinearLayout {
-
-	// keys for saving/restoring instance state
-	private final static String KEY_MENUSHOWN = "menuWasShown";
-	private final static String KEY_STATUSBARHEIGHT = "statusBarHeight";
-	private final static String KEY_SUPERSTATE = "superState";
+public class SlideMenu extends SlideView {
 
 
 	public static class SlideMenuItem {
@@ -104,22 +99,8 @@ public class SlideMenu extends LinearLayout {
 		}
 	}
 
-	// this tells whether the menu is currently shown
-	private boolean menuIsShown = false;
-	// this just tells whether the menu was ever shown
-	private boolean menuWasShown = false;
-	private int statusHeight = -1;
-	private static View menu;
-	private static ViewGroup content;
-	private static FrameLayout parent;
-	private static int menuSize;
-	private Activity act;
 	private Drawable headerImage;
 	private Typeface font;
-	private TranslateAnimation slideRightAnim;
-	private TranslateAnimation slideMenuLeftAnim;
-	private TranslateAnimation slideContentLeftAnim;
-
 
 	private ArrayList<SlideMenuItem> menuItemList;
 	private SlideMenuInterface.OnSlideMenuItemClickListener callback;
@@ -173,49 +154,12 @@ public class SlideMenu extends LinearLayout {
 	 * @param slideDuration Slide in/out duration in milliseconds.
 	 */
 	public void init(Activity act, int menuResource, SlideMenuInterface.OnSlideMenuItemClickListener cb, int slideDuration) {
+        super.init(act, slideDuration);
 
-		this.act = act;
 		this.callback = cb;
-
-		// set size
-		menuSize = (int) TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 250, act.getResources().getDisplayMetrics());
-
-		// create animations accordingly
-		slideRightAnim = new TranslateAnimation(-menuSize, 0, 0, 0);
-		slideRightAnim.setFillAfter(true);
-		slideMenuLeftAnim = new TranslateAnimation(0, -menuSize, 0, 0);
-		slideMenuLeftAnim.setFillAfter(true);
-		slideContentLeftAnim = new TranslateAnimation(menuSize, 0, 0, 0);
-		slideContentLeftAnim.setFillAfter(true);
-		setAnimationDuration(slideDuration);
 		// and get our menu
 		parseXml(menuResource);
 
-	}
-
-
-	/**
-	 * Set how long slide animation should be
-	 * @see TranslateAnimation#setDuration(long)
-	 * @param slideDuration
-	 *                     How long to set the slide animation
-	 */
-	public void setAnimationDuration(long slideDuration) {
-		slideRightAnim.setDuration(slideDuration);
-		slideMenuLeftAnim.setDuration(slideDuration*3/2);
-		slideContentLeftAnim.setDuration(slideDuration*3/2);
-	}
-
-	/**
-	 * Set an Interpolator for the slide animation.
-	 * @see TranslateAnimation#setInterpolator(Interpolator)
-	 * @param i
-	 *         The {@link Interpolator} object to set.
-	 */
-	public void setAnimationInterpolator(Interpolator i) {
-		slideRightAnim.setInterpolator(i);
-		slideMenuLeftAnim.setInterpolator(i);
-		slideContentLeftAnim.setInterpolator(i);
 	}
 
 	/**
@@ -251,198 +195,44 @@ public class SlideMenu extends LinearLayout {
 		menuItemList.clear();
 	}
 
+    @Override
+    public View inflateSlideview(LayoutInflater inflater) {
+
+        View v = inflater.inflate(R.layout.slidemenu, null);
+
+        FrameLayout.LayoutParams lays = new FrameLayout.LayoutParams(-1, -1, 3);
+        lays.setMargins(0, statusHeight, 0, 0);
+        v.setLayoutParams(lays);
+
+        // set header
+        try {
+            ImageView header = (ImageView) act.findViewById(R.id.menu_header);
+            header.setImageDrawable(headerImage);
+        }
+        catch(Exception e) {
+            // not found
+        }
+
+        // connect the menu's listview
+        ListView list = (ListView) v.findViewById(R.id.menu_listview);
+        SlideMenuItem[] items = menuItemList.toArray(new SlideMenuItem[menuItemList.size()]);
+        SlideMenuAdapter adap = new SlideMenuAdapter(act, items, font);
+        list.setAdapter(adap);
+        list.setOnItemClickListener(new OnItemClickListener() {
+            @Override
+            public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
+
+                if(callback != null)
+                    callback.onSlideMenuItemClick(menuItemList.get(position).id);
+
+                hide();
+            }
+        });
 
 
-	/**
-	 * Slide the menu in.
-	 */
-	public void show() {
-		this.show(true);
-	}
+        return v;
+    }
 
-	/**
-	 * Set the menu to shown status without displaying any slide animation.
-	 */
-	public void setAsShown() {
-		this.show(false);
-	}
-
-	@SuppressLint("NewApi")
-	private void show(boolean animate) {
-
-		/*
-		 *  We have to adopt to status bar height in most cases,
-		 *  but not if there is a support actionbar!
-		 */
-		try {
-			Method getSupportActionBar = act.getClass().getMethod("getSupportActionBar", (Class[])null);
-			Object sab = getSupportActionBar.invoke(act, (Object[])null);
-			sab.toString(); // check for null
-
-			if (android.os.Build.VERSION.SDK_INT >= 11) {
-				// over api level 11? add the margin
-				getStatusbarHeight();
-			}
-		}
-		catch(Exception es) {
-			// there is no support action bar!
-			getStatusbarHeight();
-		}
-
-		// modify content layout params
-		try {
-			content = ((LinearLayout) act.findViewById(android.R.id.content).getParent());
-		}
-		catch(ClassCastException e) {
-			/*
-			 * When there is no title bar (android:theme="@android:style/Theme.NoTitleBar"),
-			 * the android.R.id.content FrameLayout is directly attached to the DecorView,
-			 * without the intermediate LinearLayout that holds the titlebar plus content.
-			 */
-			if(Build.VERSION.SDK_INT < 18)
-				content = (ViewGroup) act.findViewById(android.R.id.content);
-			else
-				content = (ViewGroup) act.findViewById(android.R.id.content).getParent(); //FIXME? what about the corner cases (fullscreen etc)
-		}
-
-		FrameLayout.LayoutParams parm = new FrameLayout.LayoutParams(-1, -1, 3);
-		parm.setMargins(menuSize, 0, -menuSize, 0);
-		content.setLayoutParams(parm);
-
-		// animation for smooth slide-out
-		if(animate)
-			content.startAnimation(slideRightAnim);
-
-		// quirk for sony xperia devices on ICS only, shouldn't hurt on others
-		if(Build.VERSION.SDK_INT >= 11 && Build.VERSION.SDK_INT <= 15  && Build.MANUFACTURER.contains("Sony") && menuWasShown)
-			content.setX(menuSize);
-
-		// add the slide menu to parent
-		try{
-			parent = (FrameLayout) content.getParent();
-		}catch(ClassCastException e){
-			/*
-			 * Most probably a LinearLayout, at least on Galaxy S3.
-			 * https://github.com/bk138/LibSlideMenu/issues/12
-			 */
-			LinearLayout realParent = (LinearLayout) content.getParent();
-			parent = new FrameLayout(act);
-			realParent.addView(parent, 0); // add FrameLayout to real parent of content
-			realParent.removeView(content); // remove content from real parent
-			parent.addView(content); // add content to FrameLayout
-		}
-
-
-		LayoutInflater inflater = (LayoutInflater) act.getSystemService(Context.LAYOUT_INFLATER_SERVICE);
-		menu = inflater.inflate(R.layout.slidemenu, null);
-
-		FrameLayout.LayoutParams lays = new FrameLayout.LayoutParams(-1, -1, 3);
-		lays.setMargins(0, statusHeight, 0, 0);
-		menu.setLayoutParams(lays);
-
-		parent.addView(menu);
-
-		// set header
-		try {
-			ImageView header = (ImageView) act.findViewById(R.id.menu_header);
-			header.setImageDrawable(headerImage);
-		}
-		catch(Exception e) {
-			// not found
-		}
-
-		// connect the menu's listview
-		ListView list = (ListView) v.findViewById(R.id.menu_listview);
-		SlideMenuItem[] items = menuItemList.toArray(new SlideMenuItem[menuItemList.size()]);
-		SlideMenuAdapter adap = new SlideMenuAdapter(act, items, font);
-		list.setAdapter(adap);
-		list.setOnItemClickListener(new OnItemClickListener() {
-			@Override
-			public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
-
-				if(callback != null)
-					callback.onSlideMenuItemClick(menuItemList.get(position).id);
-
-				hide();
-			}
-		});
-
-		// slide menu in
-		if(animate)
-			menu.startAnimation(slideRightAnim);
-
-
-		menu.findViewById(R.id.overlay).setOnClickListener(new OnClickListener() {
-			@Override
-			public void onClick(View v) {
-				SlideMenu.this.hide();
-			}
-		});
-		enableDisableViewGroup(content, false);
-
-		menuIsShown = true;
-		menuWasShown = true;
-	}
-
-
-
-	/**
-	 * Slide the menu out.
-	 */
-	@SuppressLint("NewApi")
-	public void hide() {
-		menu.startAnimation(slideMenuLeftAnim);
-		parent.removeView(menu);
-
-		content.startAnimation(slideContentLeftAnim);
-
-		FrameLayout.LayoutParams parm = (FrameLayout.LayoutParams) content.getLayoutParams();
-		parm.setMargins(0, 0, 0, 0);
-		content.setLayoutParams(parm);
-		enableDisableViewGroup(content, true);
-
-		// quirk for sony xperia devices on ICS only, shouldn't hurt on others
-		if(Build.VERSION.SDK_INT >= 11 && Build.VERSION.SDK_INT <= 15 && Build.MANUFACTURER.contains("Sony"))
-			content.setX(0);
-
-		menuIsShown = false;
-	}
-
-
-	private void getStatusbarHeight() {
-		// Only do this if not already set.
-		// Especially when called from within onCreate(), this does not return the true values.
-		if(statusHeight == -1) {
-			Rect r = new Rect();
-			Window window = act.getWindow();
-			window.getDecorView().getWindowVisibleDisplayFrame(r);
-			statusHeight = r.top;
-		}
-	}
-
-
-	//originally: http://stackoverflow.com/questions/5418510/disable-the-touch-events-for-all-the-views
-	//modified for the needs here
-	private void enableDisableViewGroup(ViewGroup viewGroup, boolean enabled) {
-		int childCount = viewGroup.getChildCount();
-		for (int i = 0; i < childCount; i++) {
-			View view = viewGroup.getChildAt(i);
-			if(view.isFocusable())
-				view.setEnabled(enabled);
-			if (view instanceof ViewGroup) {
-				enableDisableViewGroup((ViewGroup) view, enabled);
-			} else if (view instanceof ListView) {
-				if(view.isFocusable())
-					view.setEnabled(enabled);
-				ListView listView = (ListView) view;
-				int listChildCount = listView.getChildCount();
-				for (int j = 0; j < listChildCount; j++) {
-					if(view.isFocusable())
-						listView.getChildAt(j).setEnabled(false);
-				}
-			}
-		}
-	}
 
 	// originally: https://github.com/darvds/RibbonMenu
 	// credit where credits due!
@@ -506,44 +296,6 @@ public class SlideMenu extends LinearLayout {
 			return act.getResources().getString(Integer.valueOf(id));
 
 		}
-	}
-
-
-	@Override
-	protected void onRestoreInstanceState(Parcelable state)	{
-		try{
-
-			if (state instanceof Bundle) {
-				Bundle bundle = (Bundle) state;
-
-				statusHeight = bundle.getInt(KEY_STATUSBARHEIGHT);
-
-				if(bundle.getBoolean(KEY_MENUSHOWN))
-					show(false); // show without animation
-
-				super.onRestoreInstanceState(bundle.getParcelable(KEY_SUPERSTATE));
-
-				return;
-			}
-
-			super.onRestoreInstanceState(state);
-
-		}
-		catch(NullPointerException e) {
-			// in case the menu was not declared via XML but added from code
-		}
-	}
-
-
-
-	@Override
-	protected Parcelable onSaveInstanceState()	{
-		Bundle bundle = new Bundle();
-		bundle.putParcelable(KEY_SUPERSTATE, super.onSaveInstanceState());
-		bundle.putBoolean(KEY_MENUSHOWN, menuIsShown);
-		bundle.putInt(KEY_STATUSBARHEIGHT, statusHeight);
-
-		return bundle;
 	}
 
 
